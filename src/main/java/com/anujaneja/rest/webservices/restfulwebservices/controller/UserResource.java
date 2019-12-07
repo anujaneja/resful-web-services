@@ -4,18 +4,28 @@ import com.anujaneja.rest.webservices.restfulwebservices.exception.UserNotFoundE
 import com.anujaneja.rest.webservices.restfulwebservices.model.User;
 import com.anujaneja.rest.webservices.restfulwebservices.service.UserServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.i18n.LocaleContextResolver;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Locale;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
 @RestController
 public class UserResource {
@@ -23,18 +33,26 @@ public class UserResource {
     @Autowired
     private UserServiceImpl userService;
 
+    @Autowired
+    private MessageSource messageSource;
+
     @GetMapping("/users")
     public List<User> retrieveAllUsers() {
         return userService.findAll();
     }
 
     @GetMapping("/users/{id}")
-    public User retrieveUser(@PathVariable int id) {
+    public EntityModel<User> retrieveUser(@PathVariable int id) {
         User user = userService.findOne(id);
         if(user==null) {
             throw new UserNotFoundException("id="+id);
         }
-        return user;
+
+        EntityModel<User> model = new EntityModel<>(user);
+        WebMvcLinkBuilder linkTo = linkTo(methodOn(this.getClass()).retrieveAllUsers());
+        model.add(linkTo.withRel("all-users"));
+
+        return model;
     }
 
     @PostMapping("/users")
@@ -58,6 +76,10 @@ public class UserResource {
         if(deletedUser==null) {
             throw new UserNotFoundException("id="+id);
         }
+    }
 
+    @GetMapping(path = "/hello-world-i18n")
+    public String helloWorldI18n() {
+        return messageSource.getMessage("good.morning.message",null, LocaleContextHolder.getLocale());
     }
 }
